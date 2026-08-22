@@ -6,6 +6,8 @@ from shared.schemas.envelope import EnvelopeResponse, EnvelopeRequest, ErrorDeta
 from shared.schemas.attack import AttackScenario, MutationRequest, MutationResponse
 from apps.threat_service.database import engine, Base, get_db
 from apps.threat_service.models import AttackScenarioDB
+from dotenv import load_dotenv
+load_dotenv() # This loads the OPENAI_API_KEY from the .env file
 
 app = FastAPI(title="FraudGuard 360 - Threat Intelligence", docs_url="/docs")
 
@@ -27,11 +29,29 @@ async def health():
 
 @app.post("/api/v1/attacks/discover")
 async def discover_attacks(payload: EnvelopeRequest):
-    # TODO: Trigger LangGraph Agent here
+    from apps.threat_service.llm.discover_agent import discover_chain
+    
+    # For MVP, we cycle through categories the LLM can target
+    target_category = payload.data.get("category", "ACCOUNT_TAKEOVER")
+    
+    # Run the LangGraph agent
+    result = discover_chain.invoke({"category": target_category})
+    
+    if result.get("error"):
+        return EnvelopeResponse(
+            request_id=payload.request_id,
+            timestamp=datetime.now(timezone.utc),
+            data={"status": "failed", "error": result["error"], "candidate": None}
+        )
+        
+    candidate = result.get("validated_scenario")
+    
+    # In a full system, you would insert this into the DB here.
+    # For now, we just return the candidate for the user to review.
     return EnvelopeResponse(
         request_id=payload.request_id,
         timestamp=datetime.now(timezone.utc),
-        data={"message": "LLM discovery initiated. Await approval."}
+        data={"status": "success", "candidate": candidate}
     )
 
 @app.get("/api/v1/attacks")
