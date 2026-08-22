@@ -1,0 +1,13 @@
+{
+  "dataset_id": "DS_0c4a7e8a",
+  "rows": 1000,
+  "fraud_rows": 100,
+  "schema_version": "1.0",
+  "attack_ids": [
+    "ATO_001"
+  ],
+  "seed": 42,
+  "generator_version": "1.0.0",
+  "provenance": "baseline_plus_attacks",
+  "created_at": "2026-08-22T18:35:03.206918Z"
+}
