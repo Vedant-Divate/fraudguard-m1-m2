@@ -1,7 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional, Any
 from enum import Enum
-from datetime import datetime
 
 class AttackCategory(str, Enum):
     ACCOUNT_TAKEOVER = "ACCOUNT_TAKEOVER"
@@ -37,6 +36,8 @@ class Provenance(BaseModel):
     mutation_operators: list[str] = []
 
 class AttackScenario(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     attack_id: str
     version: str = "1.0"
     category: AttackCategory

@@ -37,21 +37,26 @@ async def discover_attacks(payload: EnvelopeRequest):
 @app.get("/api/v1/attacks")
 async def list_attacks(db: Session = Depends(get_db)):
     attacks = db.query(AttackScenarioDB).all()
+    # Convert SQLAlchemy objects to Pydantic schemas
+    attacks_data = [AttackScenario.model_validate(a) for a in attacks]
     return EnvelopeResponse(
         request_id=generate_request_id(),
         timestamp=datetime.now(timezone.utc),
-        data={"count": len(attacks), "attacks": attacks}
+        data={"count": len(attacks_data), "attacks": attacks_data}
     )
+
 
 @app.get("/api/v1/attacks/{attack_id}")
 async def get_attack(attack_id: str, db: Session = Depends(get_db)):
     attack = db.query(AttackScenarioDB).filter(AttackScenarioDB.attack_id == attack_id).first()
     if not attack:
         raise HTTPException(status_code=404, detail="Attack not found")
+    # Convert SQLAlchemy object to Pydantic schema
+    attack_data = AttackScenario.model_validate(attack)
     return EnvelopeResponse(
         request_id=generate_request_id(),
         timestamp=datetime.now(timezone.utc),
-        data=attack
+        data=attack_data
     )
 
 @app.post("/api/v1/attacks/mutate")
