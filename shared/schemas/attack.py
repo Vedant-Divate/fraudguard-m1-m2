@@ -52,3 +52,8 @@ class AttackScenario(BaseModel):
 class MutationRequest(BaseModel):
     attack_id: str
     operators: list[dict[str, Any]] # e.g., [{"name": "bump_velocity", "params": {"multiplier": 5}}]
+
+class MutationResponse(BaseModel):
+    new_attack_id: str
+    version: str
+    parent_provenance: Provenance
