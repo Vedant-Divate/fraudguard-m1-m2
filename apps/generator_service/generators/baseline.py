@@ -33,7 +33,7 @@ def generate_baseline_transactions(rows: int, seed: int = 42) -> pd.DataFrame:
     
     # Assemble DataFrame
     df = pd.DataFrame({
-        "transaction_id": [f"TX{str(i).zfill(8)}" for i in range(rows)],
+        "transaction_id": [f"TX_{uuid4().hex[:12]}" for _ in range(rows)],
         "customer_id": customer_ids,
         "merchant_id": merchant_ids,
         "amount": amounts,

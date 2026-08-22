@@ -7,6 +7,8 @@ from shared.schemas.transaction import GenerationRequest, DatasetMetadata
 from apps.generator_service.generators.baseline import generate_baseline_transactions
 from apps.generator_service.generators.attack_conditioner import generate_attack_transactions
 from apps.generator_service.storage import save_dataset
+from apps.generator_service.validators.data_validator import validate_dataset
+from fastapi import HTTPException
 
 app = FastAPI(title="FraudGuard 360 - Synthetic Generator", docs_url="/docs")
 
@@ -20,6 +22,8 @@ async def health():
         timestamp=datetime.now(timezone.utc),
         data={"status": "healthy"}
     )
+
+
 
 @app.post("/api/v1/generator/transactions")
 async def generate_transactions(payload: EnvelopeRequest):
@@ -56,11 +60,20 @@ async def generate_transactions(payload: EnvelopeRequest):
         created_at=datetime.now(timezone.utc)
     )
     
-    # 4. Save to Parquet and Manifest
+    # 4. Run Validators
+    validation_report = validate_dataset(df_combined, metadata)
+    if not validation_report["schema_valid"]:
+        raise HTTPException(status_code=500, detail=f"Data validation failed: {validation_report['quality_issues']}")
+        
+    # 5. Save to Parquet and Manifest
     save_dataset(df_combined, metadata)
+    
+    # 6. Return response with validation report included
+    response_data = metadata.model_dump()
+    response_data["validation_report"] = validation_report
     
     return EnvelopeResponse(
         request_id=payload.request_id,
         timestamp=datetime.now(timezone.utc),
-        data=metadata
+        data=response_data
     )
