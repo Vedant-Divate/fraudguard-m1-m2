@@ -8,6 +8,8 @@ from apps.threat_service.database import engine, Base, get_db
 from apps.threat_service.models import AttackScenarioDB
 from dotenv import load_dotenv
 load_dotenv() # This loads the OPENAI_API_KEY from the .env file
+from apps.threat_service.mutation.operators import apply_mutations
+from shared.schemas.attack import AttackScenario, Provenance
 
 app = FastAPI(title="FraudGuard 360 - Threat Intelligence", docs_url="/docs")
 
@@ -79,16 +81,56 @@ async def get_attack(attack_id: str, db: Session = Depends(get_db)):
         data=attack_data
     )
 
+
 @app.post("/api/v1/attacks/mutate")
-async def mutate_attack(payload: EnvelopeRequest):
+async def mutate_attack(payload: EnvelopeRequest, db: Session = Depends(get_db)):
     req_data = MutationRequest(**payload.data)
-    # TODO: Apply mutation operators and save to DB
+    
+    # 1. Fetch the parent scenario
+    parent = db.query(AttackScenarioDB).filter(AttackScenarioDB.attack_id == req_data.attack_id).first()
+    if not parent:
+        raise HTTPException(status_code=404, detail="Parent attack not found")
+        
+    parent_schema = AttackScenario.model_validate(parent)
+    
+    # 2. Apply mutations to parameters
+    new_params, applied_ops = apply_mutations(parent_schema.parameters, req_data.operators)
+    
+    # 3. Generate new ID and Version
+    # e.g., ATO_001 -> ATO_001_V2
+    base_id = parent_schema.attack_id.split("_V")[0]
+    existing_variants = db.query(AttackScenarioDB).filter(AttackScenarioDB.attack_id.like(f"{base_id}_V%")).count()
+    new_version_num = existing_variants + 1
+    
+    new_attack_id = f"{base_id}_V{new_version_num}"
+    new_version_str = f"1.{new_version_num}"
+    
+    # 4. Create the new mutated scenario object
+    mutated_scenario = AttackScenario(
+        attack_id=new_attack_id,
+        version=new_version_str,
+        category=parent_schema.category,
+        channel=parent_schema.channel,
+        risk_level=parent_schema.risk_level,
+        description=f"Mutated variant of {parent_schema.attack_id}. Harder pattern: {', '.join(applied_ops)}",
+        parameters=new_params,
+        features=list(new_params.model_dump().keys()),
+        novelty_score=max(0.0, parent_schema.novelty_score - 0.1), # slightly less novel than baseline
+        provenance=Provenance(
+            source="mutation_engine",
+            parent_attack_id=parent_schema.attack_id,
+            mutation_operators=applied_ops
+        )
+    )
+    
+    # 5. Save to Database
+    db_scenario = AttackScenarioDB(**mutated_scenario.model_dump())
+    db.add(db_scenario)
+    db.commit()
+    db.refresh(db_scenario)
+    
     return EnvelopeResponse(
         request_id=payload.request_id,
         timestamp=datetime.now(timezone.utc),
-        data=MutationResponse(
-            new_attack_id=f"{req_data.attack_id}_V2",
-            version="1.1",
-            parent_provenance={"source": "mutation", "parent_attack_id": req_data.attack_id}
-        )
+        data=AttackScenario.model_validate(db_scenario)
     )
