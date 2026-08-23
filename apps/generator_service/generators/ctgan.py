@@ -6,19 +6,20 @@ from apps.generator_service.generators.baseline import generate_baseline_transac
 
 MODEL_PATH = "data/synthetic/ctgan_model.pkl"
 
-def train_ctgan_model(rows=10000, seed=42):
+def train_ctgan_model(rows=2000, seed=42):   #update rows=10000 if needed
     """Trains a CTGAN model on baseline data and saves it."""
     print(f"Generating {rows} baseline rows for CTGAN training...")
     df = generate_baseline_transactions(rows=rows, seed=seed)
     
-    # Drop columns CTGAN struggles with for MVP
-    df_train = df.drop(columns=["timestamp", "transaction_id"])
+    # Drop columns CTGAN struggles with
+    df_train = df.drop(columns=["timestamp", "transaction_id", "attack_id", "is_fraud"])
     
     metadata = SingleTableMetadata()
     metadata.detect_from_dataframe(df_train)
     
-    print("Training CTGAN model (this may take a minute)...")
-    model = CTGANSynthesizer(metadata)
+    print("Training CTGAN model (reduced epochs for speed)...")
+    # Reduce epochs to 50 for a fast hackathon demo (default is 300)
+    model = CTGANSynthesizer(metadata, epochs=50)
     model.fit(df_train)
     
     os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
