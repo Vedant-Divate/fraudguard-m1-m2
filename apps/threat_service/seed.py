@@ -33,7 +33,7 @@ def seed_database():
                 risk_level=scenario_data["risk_level"],
                 description=scenario_data["description"],
                 parameters=scenario_data["parameters"],
-                features=list(scenario_data["parameters"].keys()),
+                features=["new_device", "velocity_spike", "location_shift", "amount_anomaly", "merchant_novelty"],
                 novelty_score=0.9, # High novelty since they are distinct baseline scenarios
                 provenance={"source": "manual", "parent_attack_id": None, "mutation_operators": []}
             )

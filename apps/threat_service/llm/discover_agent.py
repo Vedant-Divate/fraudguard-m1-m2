@@ -7,7 +7,7 @@ from shared.schemas.attack import (
     AttackScenario, AttackCategory, RiskLevel, AttackParameters, Provenance,
 )
 
-print(f"DEBUG: GROQ_API_KEY loaded? {'Yes' if os.getenv('GROQ_API_KEY') else 'NO - MISSING!'}")
+
 
 class LLMDraft(BaseModel):
     """Everything we ask Llama for. IDs, risk_level and channel stay
@@ -22,7 +22,7 @@ class AgentState(TypedDict):
     validated_scenario: Optional[dict]
     error: Optional[str]
 
-MODEL_NAME = "openai/gpt-oss-120b"
+MODEL_NAME = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 
 # Constructing this is lazy/cheap — it does NOT hit the network or require
 # a key until .invoke() is actually called, so importing this module is safe.
