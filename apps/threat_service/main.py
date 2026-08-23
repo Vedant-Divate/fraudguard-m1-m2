@@ -7,7 +7,7 @@ from shared.schemas.attack import AttackScenario, MutationRequest, MutationRespo
 from apps.threat_service.database import engine, Base, get_db
 from apps.threat_service.models import AttackScenarioDB
 from dotenv import load_dotenv
-load_dotenv() # This loads the OPENAI_API_KEY from the .env file
+load_dotenv()
 from apps.threat_service.mutation.operators import apply_mutations
 from shared.schemas.attack import AttackScenario, Provenance
 

@@ -18,6 +18,15 @@ scenarios = [
     {"attack_id": "IMPERS_001", "category": AttackCategory.IMPERSONATION_SOCIAL_ENGINEERING, "channel": "P2P", "risk_level": RiskLevel.CRITICAL, "description": "Synthetic message context -> abnormal payee change -> urgent payment", "parameters": {"velocity_multiplier": 2, "amount_anomaly_z": 3.0, "time_window_minutes": 10}}
 ]
 
+# Maps raw parameter keys to human-readable signal names for M3
+SIGNAL_MAP = {
+    "new_device": "new_device", 
+    "velocity_multiplier": "velocity_spike",
+    "location_shift": "location_shift", 
+    "amount_anomaly_z": "amount_anomaly",
+    "merchant_novelty": "merchant_novelty"
+}
+
 def seed_database():
     db = SessionLocal()
     try:
@@ -25,6 +34,9 @@ def seed_database():
         db.query(AttackScenarioDB).delete()
         
         for scenario_data in scenarios:
+            # Dynamically generate features list based on which parameters are actually present
+            active_features = [SIGNAL_MAP[k] for k in scenario_data["parameters"] if k in SIGNAL_MAP]
+            
             # Use Pydantic to validate, then dump to dict for DB
             scenario = AttackScenario(
                 attack_id=scenario_data["attack_id"],
@@ -33,7 +45,7 @@ def seed_database():
                 risk_level=scenario_data["risk_level"],
                 description=scenario_data["description"],
                 parameters=scenario_data["parameters"],
-                features=["new_device", "velocity_spike", "location_shift", "amount_anomaly", "merchant_novelty"],
+                features=active_features,
                 novelty_score=0.9, # High novelty since they are distinct baseline scenarios
                 provenance={"source": "manual", "parent_attack_id": None, "mutation_operators": []}
             )
