@@ -1,4 +1,34 @@
-﻿### 1. Environment Setup
+﻿# FraudGuard 360 - Red Team Engine (M1 & M2)
+**Mastercard Innovation Challenge @ GFF 2026**
+
+This repository contains the **Threat Intelligence & Red Team (M1)** and **Synthetic Data Generator (M2)** modules for the FraudGuard 360 platform.
+
+It forms the front half of a closed-loop AI system that uses Large Language Models to discover emerging payment-fraud patterns, mutates them into harder variants, and generates high-fidelity synthetic transaction data to train and stress-test the Blue Team detection models.
+
+## 🏛️ Architecture & Data Flow
+
+1. **Threat Intelligence (M1):** A LangGraph agent uses an LLM (Groq/Llama 3.3) to propose novel attack scenarios in strict JSON. A Pydantic schema validator ensures structural integrity.
+2. **Scenario Registry:** Validated scenarios are stored in PostgreSQL with full versioning and provenance tracking.
+3. **Mutation Engine:** Applies rule-based operators (e.g., `bump_velocity`, `swap_device`) to existing scenarios to create "hard negative" variants.
+4. **Synthetic Generator (M2):** Fetches scenarios from M1 via HTTP, generates a baseline of realistic normal transactions (Pandas/NumPy), and distorts a portion of them to exhibit the exact fraud signals defined in the scenario.
+5. **Data Vault:** The final labeled dataset is validated for schema/fidelity, then saved to disk as `.parquet` files alongside a `manifest.json` for downstream ML training (M3/M4).
+
+## 🛠️ Tech Stack
+
+- **API Framework:** FastAPI, Pydantic v2
+- **AI/Agents:** LangGraph, LangChain, Groq (Llama 3.3)
+- **Database:** PostgreSQL, SQLAlchemy
+- **Data Engine:** Pandas, NumPy, PyArrow (Parquet)
+- **Infrastructure:** Docker, Docker Compose
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Python 3.11+
+- Docker Desktop (for PostgreSQL)
+
+### 1. Environment Setup
 
 Create a virtual environment and install dependencies:
 
@@ -25,7 +55,7 @@ Start the local PostgreSQL database via Docker:
 docker compose up -d postgres
 ```
 
-### Seed the Database (M1)
+### 4. Seed the Database (M1)
 
 Populate the database with 12 hand-crafted baseline attack scenarios:
 
@@ -81,3 +111,25 @@ docker compose up --build
 ```
 
 *Note: Ensure your `.env` file is populated before building.*
+
+## Git Branch Workflow
+
+Save the README to both feature branches:
+
+```bash
+# 1. Commit to synthetic-generator
+git add .
+git commit -m "docs: add professional README with architecture and run instructions"
+git push origin feature/synthetic-generator
+
+# 2. Switch to the threat branch
+git checkout feature/threat-intelligence
+
+# 3. Bring the README over from the generator branch
+git checkout feature/synthetic-generator -- README.md
+
+# 4. Commit to threat-intelligence
+git add .
+git commit -m "docs: add professional README with architecture and run instructions"
+git push origin feature/threat-intelligence
+```
