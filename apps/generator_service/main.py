@@ -53,7 +53,7 @@ async def generate_transactions(payload: EnvelopeRequest):
                 
         if fraud_dfs:
             df_fraud = pd.concat(fraud_dfs).sample(frac=1, random_state=req_data.seed).reset_index(drop=True)
-            
+
     # 3. Combine and shuffle
     df_combined = pd.concat([df_legit, df_fraud]).sample(frac=1, random_state=req_data.seed).reset_index(drop=True)
     
@@ -74,9 +74,14 @@ async def generate_transactions(payload: EnvelopeRequest):
     
     # 4. Run Validators
     validation_report = validate_dataset(df_combined, metadata)
+    
+    # NEW: Add Advanced Fidelity Metrics
+    from apps.generator_service.validators.data_validator import calculate_fidelity_metrics
+    validation_report["fidelity_metrics"] = calculate_fidelity_metrics(df_combined)
+    
     if not validation_report["schema_valid"]:
         raise HTTPException(status_code=500, detail=f"Data validation failed: {validation_report['quality_issues']}")
-        
+    
     # 5. Save to Parquet and Manifest
     save_dataset(df_combined, metadata)
     
