@@ -2,13 +2,15 @@ import os
 from typing import TypedDict, Optional
 from langgraph.graph import StateGraph, END
 from pydantic import BaseModel, ValidationError
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
 from shared.schemas.attack import (
     AttackScenario, AttackCategory, RiskLevel, AttackParameters, Provenance,
 )
 
+print(f"DEBUG: GROQ_API_KEY loaded? {'Yes' if os.getenv('GROQ_API_KEY') else 'NO - MISSING!'}")
+
 class LLMDraft(BaseModel):
-    """Everything we ask Gemini for. IDs, risk_level and channel stay
+    """Everything we ask Llama for. IDs, risk_level and channel stay
     backend-controlled so the LLM can't invent an invalid enum value."""
     description: str
     parameters: AttackParameters
@@ -20,11 +22,11 @@ class AgentState(TypedDict):
     validated_scenario: Optional[dict]
     error: Optional[str]
 
-MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+MODEL_NAME = "openai/gpt-oss-120b"
 
 # Constructing this is lazy/cheap — it does NOT hit the network or require
 # a key until .invoke() is actually called, so importing this module is safe.
-_llm = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=0.7)
+_llm = ChatGroq(model=MODEL_NAME, temperature=0.7)
 _structured_llm = _llm.with_structured_output(LLMDraft)
 
 PROMPT_TEMPLATE = """You are a payment-fraud threat-intelligence analyst supporting a \
@@ -46,7 +48,7 @@ amount_anomaly_z, time_window_minutes, merchant_novelty given this attack family
 """
 
 def generate_idea(state: AgentState):
-    """Node 1: call Gemini for a structured scenario draft."""
+    """Node 1: call Llama 3.3 for a structured scenario draft."""
     category = state["category"]
     try:
         draft: LLMDraft = _structured_llm.invoke(
