@@ -34,6 +34,7 @@ class GenerationRequest(BaseModel):
     attack_ids: list[str] = []
     seed: int = 42
     include_legitimate: bool = True
+    generator_type: str = "baseline" # "baseline" or "ctgan"
 
 class DatasetMetadata(BaseModel):
     dataset_id: str

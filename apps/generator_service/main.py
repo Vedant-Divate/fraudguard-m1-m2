@@ -11,8 +11,38 @@ from apps.generator_service.validators.data_validator import validate_dataset
 from fastapi import HTTPException
 import os
 import json     
+from pydantic import ValidationError
+from sqlalchemy.exc import IntegrityError
+from fastapi import Request
+from fastapi.responses import JSONResponse
+from shared.schemas.envelope import StatusEnum, ErrorDetail
+from apps.generator_service.generators.ctgan import train_ctgan_model, generate_ctgan_rows
 
 app = FastAPI(title="FraudGuard 360 - Synthetic Generator", docs_url="/docs")
+
+@app.exception_handler(ValidationError)
+async def validation_exception_handler(request: Request, exc: ValidationError):
+    return JSONResponse(
+        status_code=422,
+        content=EnvelopeResponse(
+            request_id="unknown",
+            timestamp=datetime.now(timezone.utc),
+            status=StatusEnum.ERROR,
+            error=ErrorDetail(code="VALIDATION_ERROR", message=str(exc))
+        ).model_dump()
+    )
+
+@app.exception_handler(IntegrityError)
+async def integrity_exception_handler(request: Request, exc: IntegrityError):
+    return JSONResponse(
+        status_code=409,
+        content=EnvelopeResponse(
+            request_id="unknown",
+            timestamp=datetime.now(timezone.utc),
+            status=StatusEnum.ERROR,
+            error=ErrorDetail(code="INTEGRITY_ERROR", message="Database constraint violated (e.g., duplicate ID).")
+        ).model_dump()
+    )
 
 def generate_request_id() -> str:
     return f"REQ_{uuid4().hex[:12]}"
@@ -36,7 +66,10 @@ async def generate_transactions(payload: EnvelopeRequest):
     legit_rows_count = req_data.rows - fraud_rows_count
     
     # 1. Generate Legitimate Transactions
-    df_legit = generate_baseline_transactions(rows=legit_rows_count, seed=req_data.seed)
+    if req_data.generator_type == "ctgan":
+        df_legit = generate_ctgan_rows(rows=legit_rows_count, seed=req_data.seed)
+    else:
+        df_legit = generate_baseline_transactions(rows=legit_rows_count, seed=req_data.seed)
     
     # 2. Generate Fraud Transactions (if requested)
     df_fraud = pd.DataFrame()
@@ -150,4 +183,14 @@ async def generate_scenario_dataset(payload: EnvelopeRequest):
         request_id=payload.request_id,
         timestamp=datetime.now(timezone.utc),
         data=response_data
+    )
+
+@app.post("/api/v1/generator/train_ctgan")
+async def train_ctgan():
+    """Triggers CTGAN training in the background."""
+    train_ctgan_model()
+    return EnvelopeResponse(
+        request_id=generate_request_id(),
+        timestamp=datetime.now(timezone.utc),
+        data={"status": "success", "message": "CTGAN model trained and saved."}
     )
