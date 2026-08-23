@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y libpq-dev gcc
 
 # Copy the requirements file and install dependencies
 COPY pyproject.toml ./
-RUN pip install --no-cache-dir fastapi uvicorn[standard] pydantic pandas numpy pyarrow httpx python-dotenv
+RUN pip install --no-cache-dir -e .
 
 # Copy the application code
 COPY . .

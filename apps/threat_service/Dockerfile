@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y libpq-dev gcc
 
 # Copy the requirements file and install dependencies
 COPY pyproject.toml ./
-RUN pip install --no-cache-dir fastapi uvicorn[standard] pydantic sqlalchemy psycopg2-binary python-dotenv langgraph langchain-core langchain-groq httpx
+RUN pip install --no-cache-dir -e .
 
 # Copy the application code
 COPY . .
