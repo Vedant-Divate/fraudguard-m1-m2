@@ -27,7 +27,7 @@ async def validation_exception_handler(request: Request, exc: ValidationError):
             timestamp=datetime.now(timezone.utc),
             status=StatusEnum.ERROR,
             error=ErrorDetail(code="VALIDATION_ERROR", message=str(exc))
-        ).model_dump()
+        ).model_dump(mode="json")
     )
 
 @app.exception_handler(IntegrityError)
@@ -39,7 +39,7 @@ async def integrity_exception_handler(request: Request, exc: IntegrityError):
             timestamp=datetime.now(timezone.utc),
             status=StatusEnum.ERROR,
             error=ErrorDetail(code="INTEGRITY_ERROR", message="Database constraint violated (e.g., duplicate ID).")
-        ).model_dump()
+        ).model_dump(mode="json")
     )
 
 # Create tables on startup
