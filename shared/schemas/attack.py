@@ -58,13 +58,3 @@ class MutationResponse(BaseModel):
     new_attack_id: str
     version: str
     parent_provenance: Provenance
-
-# Maps raw parameter keys to human-readable signal names for M3
-SIGNAL_MAP = {
-    "new_device": "new_device", 
-    "velocity_multiplier": "velocity_spike",
-    "location_shift": "location_shift", 
-    "amount_anomaly_z": "amount_anomaly",
-    "merchant_novelty": "merchant_novelty",
-    "time_window_minutes": "rapid_transaction_window"
-}
