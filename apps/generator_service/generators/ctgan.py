@@ -37,7 +37,12 @@ def generate_ctgan_rows(rows: int, seed: int = 42):
     
     # Add back the required columns we dropped
     sampled["transaction_id"] = [f"TX_CTGAN_{i}" for i in range(rows)]
-    sampled["timestamp"] = pd.Timestamp.now()
+    
+    # Fix: Distribute timestamps over the last 30 days instead of exact same time
+    end_time = pd.Timestamp.now()
+    start_time = end_time - pd.Timedelta(days=30)
+    sampled["timestamp"] = pd.date_range(start=start_time, end=end_time, periods=rows)
+    
     sampled["attack_id"] = None
     sampled["is_fraud"] = False
     
