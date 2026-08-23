@@ -10,8 +10,37 @@ from dotenv import load_dotenv
 load_dotenv()
 from apps.threat_service.mutation.operators import apply_mutations
 from shared.schemas.attack import AttackScenario, Provenance
+from shared.schemas.attack import AttackScenario, Provenance, SIGNAL_MAP
+from pydantic import ValidationError
+from sqlalchemy.exc import IntegrityError
+from fastapi import Request
+from fastapi.responses import JSONResponse
 
 app = FastAPI(title="FraudGuard 360 - Threat Intelligence", docs_url="/docs")
+
+@app.exception_handler(ValidationError)
+async def validation_exception_handler(request: Request, exc: ValidationError):
+    return JSONResponse(
+        status_code=422,
+        content=EnvelopeResponse(
+            request_id="unknown",
+            timestamp=datetime.now(timezone.utc),
+            status=StatusEnum.ERROR,
+            error=ErrorDetail(code="VALIDATION_ERROR", message=str(exc))
+        ).model_dump()
+    )
+
+@app.exception_handler(IntegrityError)
+async def integrity_exception_handler(request: Request, exc: IntegrityError):
+    return JSONResponse(
+        status_code=409,
+        content=EnvelopeResponse(
+            request_id="unknown",
+            timestamp=datetime.now(timezone.utc),
+            status=StatusEnum.ERROR,
+            error=ErrorDetail(code="INTEGRITY_ERROR", message="Database constraint violated (e.g., duplicate ID).")
+        ).model_dump()
+    )
 
 # Create tables on startup
 @app.on_event("startup")
@@ -117,7 +146,7 @@ async def mutate_attack(payload: EnvelopeRequest, db: Session = Depends(get_db))
         risk_level=parent_schema.risk_level,
         description=f"Mutated variant of {parent_schema.attack_id}. Harder pattern: {', '.join(applied_ops)}",
         parameters=new_params,
-        features=list(new_params.model_dump().keys()),
+        features=[SIGNAL_MAP[k] for k in new_params.model_dump() if k in SIGNAL_MAP and getattr(new_params, k)],
         novelty_score=max(0.0, parent_schema.novelty_score - 0.1), # slightly less novel than baseline
         provenance=Provenance(
             source="mutation_engine",

@@ -1,6 +1,7 @@
 from apps.threat_service.database import SessionLocal
 from apps.threat_service.models import AttackScenarioDB
 from shared.schemas.attack import AttackScenario, AttackCategory, RiskLevel
+from shared.schemas.attack import AttackScenario, AttackCategory, RiskLevel, SIGNAL_MAP
 
 # 12 Hand-written baseline scenarios
 scenarios = [
@@ -18,15 +19,6 @@ scenarios = [
     {"attack_id": "IMPERS_001", "category": AttackCategory.IMPERSONATION_SOCIAL_ENGINEERING, "channel": "P2P", "risk_level": RiskLevel.CRITICAL, "description": "Synthetic message context -> abnormal payee change -> urgent payment", "parameters": {"velocity_multiplier": 2, "amount_anomaly_z": 3.0, "time_window_minutes": 10}}
 ]
 
-# Maps raw parameter keys to human-readable signal names for M3
-SIGNAL_MAP = {
-    "new_device": "new_device", 
-    "velocity_multiplier": "velocity_spike",
-    "location_shift": "location_shift", 
-    "amount_anomaly_z": "amount_anomaly",
-    "merchant_novelty": "merchant_novelty",
-    "time_window_minutes": "rapid_transaction_window"  # <-- ADD THIS LINE
-}
 
 def seed_database():
     db = SessionLocal()
