@@ -9,6 +9,8 @@ from apps.generator_service.generators.attack_conditioner import generate_attack
 from apps.generator_service.storage import save_dataset
 from apps.generator_service.validators.data_validator import validate_dataset
 from fastapi import HTTPException
+import os
+import json     
 
 app = FastAPI(title="FraudGuard 360 - Synthetic Generator", docs_url="/docs")
 
@@ -76,4 +78,22 @@ async def generate_transactions(payload: EnvelopeRequest):
         request_id=payload.request_id,
         timestamp=datetime.now(timezone.utc),
         data=response_data
+    )
+
+@app.get("/api/v1/generator/dataset/{dataset_id}")
+async def get_dataset(dataset_id: str):
+    # Look for the manifest file we saved earlier
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    manifest_path = os.path.join(project_root, "data", "synthetic", dataset_id, "manifest.json")
+    
+    if not os.path.exists(manifest_path):
+        raise HTTPException(status_code=404, detail="Dataset not found")
+        
+    with open(manifest_path, "r") as f:
+        metadata = json.load(f)
+        
+    return EnvelopeResponse(
+        request_id=generate_request_id(),
+        timestamp=datetime.now(timezone.utc),
+        data=metadata
     )

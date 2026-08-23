@@ -3,8 +3,10 @@ import numpy as np
 import httpx
 from uuid import uuid4
 from datetime import timedelta
+import os
 
-THREAT_SERVICE_URL = "http://localhost:8001"
+# ... inside fetch_attack_scenario or at the top of the file:
+THREAT_SERVICE_URL = os.getenv("THREAT_SERVICE_URL", "http://localhost:8001")
 
 def fetch_attack_scenario(attack_id: str) -> dict:
     """Calls Member 1 API to get attack parameters."""
@@ -44,12 +46,14 @@ def apply_attack_distortions(df: pd.DataFrame, scenario: dict) -> pd.DataFrame:
         df["timestamp"] = [base_time + (time_delta * i) for i in range(len(df))]
         
     # 3. Amount Anomaly (Z-score shift)
+    # ... inside apply_attack_distortions ...
     amount_z = params.get("amount_anomaly_z", 0.0)
     if amount_z != 0.0:
         mean_amt = df["amount"].mean()
         std_amt = df["amount"].std()
         if std_amt > 0:
-            df["amount"] = mean_amt + (amount_z * std_amt)
+            # Fix: Add random noise so amounts aren't identical
+            df["amount"] = mean_amt + (amount_z * std_amt) + np.random.normal(0, std_amt * 0.15, size=len(df))
             
     # 4. Merchant Novelty
     if params.get("merchant_novelty", False):
