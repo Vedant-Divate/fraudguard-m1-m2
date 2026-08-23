@@ -30,13 +30,10 @@ async def health():
     )
 
 @app.post("/api/v1/attacks/discover")
-async def discover_attacks(payload: EnvelopeRequest):
+async def discover_attacks(payload: EnvelopeRequest, db: Session = Depends(get_db)):
     from apps.threat_service.llm.discover_agent import discover_chain
     
-    # For MVP, we cycle through categories the LLM can target
     target_category = payload.data.get("category", "ACCOUNT_TAKEOVER")
-    
-    # Run the LangGraph agent
     result = discover_chain.invoke({"category": target_category})
     
     if result.get("error"):
@@ -48,8 +45,14 @@ async def discover_attacks(payload: EnvelopeRequest):
         
     candidate = result.get("validated_scenario")
     
-    # In a full system, you would insert this into the DB here.
-    # For now, we just return the candidate for the user to review.
+    # NEW: Save the discovered scenario to the database!
+    if candidate:
+        db_scenario = AttackScenarioDB(**candidate)
+        db.add(db_scenario)
+        db.commit()
+        db.refresh(db_scenario)
+        candidate = AttackScenario.model_validate(db_scenario).model_dump()
+    
     return EnvelopeResponse(
         request_id=payload.request_id,
         timestamp=datetime.now(timezone.utc),
