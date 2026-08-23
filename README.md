@@ -111,25 +111,3 @@ docker compose up --build
 ```
 
 *Note: Ensure your `.env` file is populated before building.*
-
-## Git Branch Workflow
-
-Save the README to both feature branches:
-
-```bash
-# 1. Commit to synthetic-generator
-git add .
-git commit -m "docs: add professional README with architecture and run instructions"
-git push origin feature/synthetic-generator
-
-# 2. Switch to the threat branch
-git checkout feature/threat-intelligence
-
-# 3. Bring the README over from the generator branch
-git checkout feature/synthetic-generator -- README.md
-
-# 4. Commit to threat-intelligence
-git add .
-git commit -m "docs: add professional README with architecture and run instructions"
-git push origin feature/threat-intelligence
-```
