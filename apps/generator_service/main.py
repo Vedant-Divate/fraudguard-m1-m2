@@ -41,9 +41,19 @@ async def generate_transactions(payload: EnvelopeRequest):
     # 2. Generate Fraud Transactions (if requested)
     df_fraud = pd.DataFrame()
     if fraud_rows_count > 0 and req_data.attack_ids:
-        attack_id = req_data.attack_ids[0] 
-        df_fraud = generate_attack_transactions(attack_id, rows=fraud_rows_count, seed=req_data.seed + 1)
+        fraud_dfs = []
+        # Split fraud rows equally among requested attack_ids
+        rows_per_attack = fraud_rows_count // len(req_data.attack_ids)
         
+        for i, attack_id in enumerate(req_data.attack_ids):
+            # Add remainder rows to the last attack
+            rows = rows_per_attack + (fraud_rows_count % len(req_data.attack_ids) if i == len(req_data.attack_ids)-1 else 0)
+            if rows > 0:
+                fraud_dfs.append(generate_attack_transactions(attack_id, rows=rows, seed=req_data.seed + i + 1))
+                
+        if fraud_dfs:
+            df_fraud = pd.concat(fraud_dfs).sample(frac=1, random_state=req_data.seed).reset_index(drop=True)
+            
     # 3. Combine and shuffle
     df_combined = pd.concat([df_legit, df_fraud]).sample(frac=1, random_state=req_data.seed).reset_index(drop=True)
     
@@ -96,4 +106,43 @@ async def get_dataset(dataset_id: str):
         request_id=generate_request_id(),
         timestamp=datetime.now(timezone.utc),
         data=metadata
+    )
+
+@app.post("/api/v1/generator/scenario")
+async def generate_scenario_dataset(payload: EnvelopeRequest):
+    """Generates a dataset for a single specific scenario."""
+    req_data = GenerationRequest(**payload.data)
+    
+    if not req_data.attack_ids:
+        raise HTTPException(status_code=400, detail="attack_ids is required for scenario generation")
+        
+    attack_id = req_data.attack_ids[0]
+    df_fraud = generate_attack_transactions(attack_id, rows=req_data.rows, seed=req_data.seed)
+    
+    dataset_id = f"DS_{uuid4().hex[:8]}"
+    metadata = DatasetMetadata(
+        dataset_id=dataset_id,
+        rows=len(df_fraud),
+        fraud_rows=len(df_fraud),
+        schema_version="1.0",
+        attack_ids=[attack_id],
+        seed=req_data.seed,
+        generator_version="1.0.0",
+        provenance=f"scenario_only_{attack_id}",
+        created_at=datetime.now(timezone.utc)
+    )
+    
+    validation_report = validate_dataset(df_fraud, metadata)
+    if not validation_report["schema_valid"]:
+        raise HTTPException(status_code=500, detail=f"Data validation failed: {validation_report['quality_issues']}")
+        
+    save_dataset(df_fraud, metadata)
+    
+    response_data = metadata.model_dump()
+    response_data["validation_report"] = validation_report
+    
+    return EnvelopeResponse(
+        request_id=payload.request_id,
+        timestamp=datetime.now(timezone.utc),
+        data=response_data
     )
