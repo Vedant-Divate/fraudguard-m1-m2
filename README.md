@@ -91,6 +91,7 @@ uvicorn apps.generator_service.main:app --reload --port 8002
 ### Member 2: Synthetic Generator (`http://localhost:8002`)
 
 - `POST /api/v1/generator/transactions`: Generates mixed legitimate/fraud transactions and saves to Parquet.
+- `POST /api/v1/generator/scenario`: Generates a dataset for a single specific attack scenario.
 - `GET /api/v1/generator/dataset/{dataset_id}`: Retrieves metadata for a generated dataset.
 
 ## 🧪 Testing
