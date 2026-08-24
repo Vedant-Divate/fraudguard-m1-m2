@@ -1,13 +1,14 @@
 {
-  "dataset_id": "DS_30ed9fea",
+  "dataset_id": "DS_7b49892c",
   "rows": 1000,
   "fraud_rows": 100,
   "schema_version": "1.0",
   "attack_ids": [
-    "ATO_001"
+    "ATO_001",
+    "MULE_001"
   ],
   "seed": 42,
   "generator_version": "1.0.0",
   "provenance": "baseline_plus_attacks",
-  "created_at": "2026-08-22T20:38:10.078619Z"
+  "created_at": "2026-08-24T03:49:27.038176Z"
 }
