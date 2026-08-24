@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  threat_service:
+    build:
+      context: .
+      dockerfile: apps/threat_service/Dockerfile
+    ports:
+      - "8001:8000"
+    environment:
+      - DATABASE_URL=postgresql://fg_user:fg_pass@postgres:5432/fraudguard
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GROQ_MODEL=${GROQ_MODEL:-openai/gpt-oss-120b}
+    depends_on:
+      - postgres
+
+  generator_service:
+    build:
+      context: .
+      dockerfile: apps/generator_service/Dockerfile
+    ports:
+      - "8002:8000"
+    environment:
+      - THREAT_SERVICE_URL=http://threat_service:8000
+    depends_on:
+      - threat_service
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=fg_user
+      - POSTGRES_PASSWORD=fg_pass
+      - POSTGRES_DB=fraudguard
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

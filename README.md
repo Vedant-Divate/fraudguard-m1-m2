@@ -1,4 +1,4 @@
-# FraudGuard 360
+﻿# FraudGuard 360
 
 **Closed-loop Red Team / Blue Team AI system for payment fraud detection.**
 Built for the Mastercard Innovation Challenge @ GFF 2026.
