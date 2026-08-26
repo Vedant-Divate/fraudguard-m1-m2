@@ -66,5 +66,6 @@ SIGNAL_MAP = {
     "location_shift": "location_shift", 
     "amount_anomaly_z": "amount_anomaly",
     "merchant_novelty": "merchant_novelty",
-    "time_window_minutes": "rapid_transaction_window"
+    "time_window_minutes": "rapid_transaction_window",
+    "shared_device": "shared_device" # NEW
 }
